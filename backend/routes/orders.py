@@ -85,3 +85,36 @@ def get_order_by_token(token: str, db: Session = Depends(get_db)):
     if not order:
         raise HTTPException(status_code=404, detail="Invalid token")
     return order
+
+@router.get("/suppliers/reliability")
+def get_supplier_reliability(user_id: str, db: Session = Depends(get_db)):
+    orders = db.query(PurchaseOrder).filter(
+        PurchaseOrder.user_id == user_id,
+        PurchaseOrder.status == POStatus.delivered
+    ).all()
+
+    suppliers = {}
+    for order in orders:
+        name = order.supplier_name
+        if name not in suppliers:
+            suppliers[name] = {"total": 0, "on_time": 0, "late": 0}
+        
+        suppliers[name]["total"] += 1
+        
+        if order.actual_delivery and order.actual_delivery <= order.expected_delivery:
+            suppliers[name]["on_time"] += 1
+        else:
+            suppliers[name]["late"] += 1
+
+    result = []
+    for name, data in suppliers.items():
+        score = round((data["on_time"] / data["total"]) * 100) if data["total"] > 0 else 0
+        result.append({
+            "supplier_name": name,
+            "total_orders": data["total"],
+            "on_time": data["on_time"],
+            "late": data["late"],
+            "reliability_score": score
+        })
+
+    return sorted(result, key=lambda x: x["reliability_score"], reverse=True)

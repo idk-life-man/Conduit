@@ -18,6 +18,14 @@ interface Order {
   created_at: string
 }
 
+interface Supplier {
+  supplier_name: string
+  total_orders: number
+  on_time: number
+  late: number
+  reliability_score: number
+}
+
 const STATUS_COLORS = {
   pending: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-blue-100 text-blue-800',
@@ -29,6 +37,7 @@ const STATUS_COLORS = {
 export default function Home() {
   const { user } = useUser()
   const [orders, setOrders] = useState<Order[]>([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({
@@ -42,7 +51,10 @@ export default function Home() {
   })
 
   useEffect(() => {
-    if (user) fetchOrders()
+    if (user) {
+      fetchOrders()
+      fetchSuppliers()
+    }
   }, [user])
 
   const fetchOrders = async () => {
@@ -55,6 +67,17 @@ export default function Home() {
       console.error(e)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchSuppliers = async () => {
+    if (!user) return
+    try {
+      const res = await fetch(`http://localhost:8000/api/orders/suppliers/reliability?user_id=${user.id}`)
+      const data = await res.json()
+      setSuppliers(data)
+    } catch (e) {
+      console.error(e)
     }
   }
 
@@ -82,6 +105,7 @@ export default function Home() {
           expected_delivery: '',
         })
         fetchOrders()
+        fetchSuppliers()
       }
     } catch (e) {
       console.error(e)
@@ -189,6 +213,48 @@ export default function Home() {
             </table>
           )}
         </div>
+
+        {suppliers.length > 0 && (
+          <div className="bg-white rounded-lg border border-gray-200 mt-6">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Supplier Reliability</h2>
+            </div>
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  {['Supplier', 'Total Orders', 'On Time', 'Late', 'Reliability Score'].map(h => (
+                    <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {suppliers.map(s => (
+                  <tr key={s.supplier_name} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{s.supplier_name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{s.total_orders}</td>
+                    <td className="px-6 py-4 text-sm text-green-600">{s.on_time}</td>
+                    <td className="px-6 py-4 text-sm text-red-600">{s.late}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full ${s.reliability_score >= 80 ? 'bg-green-500' : s.reliability_score >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            style={{ width: `${s.reliability_score}%` }}
+                          />
+                        </div>
+                        <span className={`text-sm font-medium ${s.reliability_score >= 80 ? 'text-green-600' : s.reliability_score >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {s.reliability_score}%
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {showForm && (
