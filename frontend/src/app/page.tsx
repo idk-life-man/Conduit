@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { useUser, UserButton } from '@clerk/nextjs'
+import { useTheme } from 'next-themes'
 
 interface Order {
   id: string
@@ -27,15 +28,33 @@ interface Supplier {
 }
 
 const STATUS_COLORS = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  confirmed: 'bg-blue-100 text-blue-800',
-  shipped: 'bg-purple-100 text-purple-800',
-  delivered: 'bg-green-100 text-green-800',
-  delayed: 'bg-red-100 text-red-800',
+  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+  confirmed: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  shipped: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+  delivered: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  delayed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+}
+
+function SunIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+    </svg>
+  )
+}
+
+function MoonIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+    </svg>
+  )
 }
 
 export default function Home() {
   const { user } = useUser()
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
   const [orders, setOrders] = useState<Order[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [loading, setLoading] = useState(true)
@@ -51,6 +70,8 @@ export default function Home() {
     quantity: '',
     expected_delivery: '',
   })
+
+  useEffect(() => setMounted(true), [])
 
   useEffect(() => {
     if (user) {
@@ -152,161 +173,190 @@ PO-002,My Company,XYZ Supplier,xyz@company.com,Another product,50,2026-06-15`
 
   const statusCounts = {
     total: orders.length,
-    overdue: orders.filter(o =>
-      new Date(o.expected_delivery) < now &&
-      o.status !== 'delivered'
-    ).length,
+    overdue: orders.filter(o => new Date(o.expected_delivery) < now && o.status !== 'delivered').length,
     pending: orders.filter(o => o.status === 'pending').length,
     delivered: orders.filter(o => o.status === 'delivered').length,
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Conduit</h1>
-          <p className="text-sm text-gray-500">Inbound Delivery Tracker</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">{user?.emailAddresses[0]?.emailAddress}</span>
-          <button
-            onClick={downloadTemplate}
-            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50"
-          >
-            Download Template
-          </button>
-          <label className={`border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer hover:bg-gray-50 ${importing ? 'opacity-50' : ''}`}>
-            {importing ? 'Importing...' : 'Import CSV'}
-            <input type="file" accept=".csv" onChange={importCSV} className="hidden" disabled={importing} />
-          </label>
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
-          >
-            + New Order
-          </button>
-        </div>
-      </div>
+    <main className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-200">
+      {/* Header */}
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-8 py-4 sticky top-0 z-40 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">C</span>
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-none">Conduit</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Inbound Delivery Tracker</p>
+            </div>
+          </div>
 
-      <div className="px-8 py-6">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={downloadTemplate}
+              className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              Download Template
+            </button>
+            <label className={`text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer ${importing ? 'opacity-50' : ''}`}>
+              {importing ? 'Importing...' : 'Import CSV'}
+              <input type="file" accept=".csv" onChange={importCSV} className="hidden" disabled={importing} />
+            </label>
+            <div className="w-px h-5 bg-gray-200 dark:bg-gray-700" />
+            {mounted && (
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+              </button>
+            )}
+            <button
+              onClick={() => setShowForm(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+            >
+              + New Order
+            </button>
+            <UserButton afterSignOutUrl="/sign-in" />
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto px-8 py-8">
         {importResult && (
-          <div className={`mb-6 p-4 rounded-lg border ${importResult.errors.length > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
-            <p className={`font-medium ${importResult.errors.length > 0 ? 'text-yellow-800' : 'text-green-800'}`}>
-              {importResult.message}
-            </p>
+          <div className={`mb-6 p-4 rounded-xl border text-sm ${importResult.errors.length > 0 ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800' : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'}`}>
+            <div className="flex items-center justify-between">
+              <p className={`font-medium ${importResult.errors.length > 0 ? 'text-yellow-800 dark:text-yellow-400' : 'text-green-800 dark:text-green-400'}`}>
+                {importResult.message}
+              </p>
+              <button onClick={() => setImportResult(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">✕</button>
+            </div>
             {importResult.errors.length > 0 && (
-              <ul className="mt-2 text-sm text-yellow-700">
-                {importResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+              <ul className="mt-2 text-yellow-700 dark:text-yellow-500 space-y-1">
+                {importResult.errors.map((e, i) => <li key={i}>• {e}</li>)}
               </ul>
             )}
-            <button onClick={() => setImportResult(null)} className="mt-2 text-sm text-gray-500 hover:text-gray-700">
-              Dismiss
-            </button>
           </div>
         )}
 
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        {/* Stats */}
+        <div className="grid grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Overdue', value: statusCounts.overdue, color: statusCounts.overdue > 0 ? 'text-red-600' : 'text-gray-400' },
-            { label: 'Total Orders', value: statusCounts.total, color: 'text-gray-900' },
-            { label: 'Pending', value: statusCounts.pending, color: 'text-yellow-600' },
-            { label: 'Delivered', value: statusCounts.delivered, color: 'text-green-600' },
+            { label: 'Overdue', value: statusCounts.overdue, color: statusCounts.overdue > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400', border: statusCounts.overdue > 0 ? 'border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20' : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900' },
+            { label: 'Total Orders', value: statusCounts.total, color: 'text-gray-900 dark:text-white', border: 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900' },
+            { label: 'Pending', value: statusCounts.pending, color: 'text-yellow-600 dark:text-yellow-400', border: 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900' },
+            { label: 'Delivered', value: statusCounts.delivered, color: 'text-green-600 dark:text-green-400', border: 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900' },
           ].map(stat => (
-            <div key={stat.label} className={`bg-white rounded-lg border p-4 ${stat.label === 'Overdue' && statusCounts.overdue > 0 ? 'border-red-200 bg-red-50' : 'border-gray-200'}`}>
-              <p className="text-sm text-gray-500">{stat.label}</p>
-              <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+            <div key={stat.label} className={`rounded-xl border p-5 shadow-sm ${stat.border}`}>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{stat.label}</p>
+              <p className={`text-4xl font-bold mt-1 ${stat.color}`}>{stat.value}</p>
             </div>
           ))}
         </div>
 
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Purchase Orders</h2>
+        {/* Orders Table */}
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm mb-6">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+            <h2 className="font-semibold text-gray-900 dark:text-white">Purchase Orders</h2>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{orders.length} orders</span>
           </div>
           {loading ? (
-            <div className="px-6 py-8 text-center text-gray-500">Loading...</div>
+            <div className="px-6 py-12 text-center">
+              <div className="inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            </div>
           ) : orders.length === 0 ? (
-            <div className="px-6 py-8 text-center text-gray-500">
-              No orders yet. Create your first order to get started.
+            <div className="px-6 py-12 text-center">
+              <p className="text-gray-500 dark:text-gray-400 text-sm">No orders yet. Create your first order to get started.</p>
             </div>
           ) : (
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  {['PO Number', 'Supplier', 'Item', 'Qty', 'Expected', 'Status', 'Supplier Link'].map(h => (
-                    <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {orders.map(order => {
-                  const isOverdue = new Date(order.expected_delivery) < now && order.status !== 'delivered'
-                  return (
-                    <tr key={order.id} className={`hover:bg-gray-50 ${isOverdue ? 'bg-red-50' : ''}`}>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                        {order.po_number}
-                        {isOverdue && <span className="ml-2 text-xs text-red-600 font-medium">OVERDUE</span>}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{order.supplier_name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{order.item_description}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{order.quantity}</td>
-                      <td className={`px-6 py-4 text-sm ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
-                        {new Date(order.expected_delivery).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status]}`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <button
-                          onClick={() => navigator.clipboard.writeText(`http://localhost:3000/supplier/${order.supplier_token}`)}
-                          className="text-blue-600 hover:text-blue-800 text-xs"
-                        >
-                          Copy Link
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    {['PO Number', 'Supplier', 'Item', 'Qty', 'Expected Delivery', 'Status', 'Supplier Link'].map(h => (
+                      <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {orders.map(order => {
+                    const isOverdue = new Date(order.expected_delivery) < now && order.status !== 'delivered'
+                    return (
+                      <tr key={order.id} className={`transition-colors ${isOverdue ? 'bg-red-50 dark:bg-red-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                          <div className="flex items-center gap-2">
+                            {order.po_number}
+                            {isOverdue && (
+                              <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400">
+                                OVERDUE
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{order.supplier_name}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300 max-w-xs truncate">{order.item_description}</td>
+                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{order.quantity}</td>
+                        <td className={`px-6 py-4 text-sm ${isOverdue ? 'text-red-600 dark:text-red-400 font-medium' : 'text-gray-600 dark:text-gray-300'}`}>
+                          {new Date(order.expected_delivery).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status]}`}>
+                            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => navigator.clipboard.writeText(`http://localhost:3000/supplier/${order.supplier_token}`)}
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors"
+                          >
+                            Copy Link
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
+        {/* Supplier Reliability */}
         {suppliers.length > 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 mt-6">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Supplier Reliability</h2>
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+              <h2 className="font-semibold text-gray-900 dark:text-white">Supplier Reliability</h2>
             </div>
             <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-gray-800">
                   {['Supplier', 'Total Orders', 'On Time', 'Late', 'Reliability Score'].map(h => (
-                    <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {suppliers.map(s => (
-                  <tr key={s.supplier_name} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{s.supplier_name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{s.total_orders}</td>
-                    <td className="px-6 py-4 text-sm text-green-600">{s.on_time}</td>
-                    <td className="px-6 py-4 text-sm text-red-600">{s.late}</td>
+                  <tr key={s.supplier_name} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{s.supplier_name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{s.total_orders}</td>
+                    <td className="px-6 py-4 text-sm text-green-600 dark:text-green-400 font-medium">{s.on_time}</td>
+                    <td className="px-6 py-4 text-sm text-red-600 dark:text-red-400 font-medium">{s.late}</td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-28 bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
                           <div
-                            className={`h-2 rounded-full ${s.reliability_score >= 80 ? 'bg-green-500' : s.reliability_score >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            className={`h-1.5 rounded-full transition-all ${s.reliability_score >= 80 ? 'bg-green-500' : s.reliability_score >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
                             style={{ width: `${s.reliability_score}%` }}
                           />
                         </div>
-                        <span className={`text-sm font-medium ${s.reliability_score >= 80 ? 'text-green-600' : s.reliability_score >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        <span className={`text-sm font-semibold ${s.reliability_score >= 80 ? 'text-green-600 dark:text-green-400' : s.reliability_score >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
                           {s.reliability_score}%
                         </span>
                       </div>
@@ -319,11 +369,15 @@ PO-002,My Company,XYZ Supplier,xyz@company.com,Another product,50,2026-06-15`
         )}
       </div>
 
+      {/* New Order Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-lg font-semibold mb-4">Create New Order</h2>
-            <div className="space-y-3">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 w-full max-w-md border border-gray-200 dark:border-gray-800">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Create New Order</h2>
+              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">✕</button>
+            </div>
+            <div className="space-y-4">
               {[
                 { key: 'po_number', label: 'PO Number', type: 'text', placeholder: 'PO-003' },
                 { key: 'supplier_name', label: 'Supplier Name', type: 'text', placeholder: 'ABC Supplier' },
@@ -333,13 +387,13 @@ PO-002,My Company,XYZ Supplier,xyz@company.com,Another product,50,2026-06-15`
                 { key: 'expected_delivery', label: 'Expected Delivery', type: 'date', placeholder: '' },
               ].map(field => (
                 <div key={field.key}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5 uppercase tracking-wide">{field.label}</label>
                   <input
                     type={field.type}
                     placeholder={field.placeholder}
                     value={form[field.key as keyof typeof form]}
                     onChange={e => setForm({ ...form, [field.key]: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
                   />
                 </div>
               ))}
@@ -347,13 +401,13 @@ PO-002,My Company,XYZ Supplier,xyz@company.com,Another product,50,2026-06-15`
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowForm(false)}
-                className="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm hover:bg-gray-50"
+                className="flex-1 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={createOrder}
-                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm"
               >
                 Create Order
               </button>

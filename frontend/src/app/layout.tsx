@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
-import { Geist } from 'next/font/google'
+import { ThemeProvider } from './theme-provider'
+import { Inter } from 'next/font/google'
 import './globals.css'
 
-const geist = Geist({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Conduit',
@@ -17,8 +18,12 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider>
-      <html lang="en" className={geist.className}>
-        <body>{children}</body>
+      <html lang="en" suppressHydrationWarning>
+        <body className={`${inter.className} bg-gray-50 dark:bg-gray-950`}>
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
+        </body>
       </html>
     </ClerkProvider>
   )
