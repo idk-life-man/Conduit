@@ -88,10 +88,15 @@ export default function Home() {
     }
   }
 
+  const now = new Date()
+
   const statusCounts = {
     total: orders.length,
+    overdue: orders.filter(o =>
+      new Date(o.expected_delivery) < now &&
+      o.status !== 'delivered'
+    ).length,
     pending: orders.filter(o => o.status === 'pending').length,
-    delayed: orders.filter(o => o.status === 'delayed').length,
     delivered: orders.filter(o => o.status === 'delivered').length,
   }
 
@@ -116,12 +121,12 @@ export default function Home() {
       <div className="px-8 py-6">
         <div className="grid grid-cols-4 gap-4 mb-6">
           {[
+            { label: 'Overdue', value: statusCounts.overdue, color: statusCounts.overdue > 0 ? 'text-red-600' : 'text-gray-400' },
             { label: 'Total Orders', value: statusCounts.total, color: 'text-gray-900' },
             { label: 'Pending', value: statusCounts.pending, color: 'text-yellow-600' },
-            { label: 'Delayed', value: statusCounts.delayed, color: 'text-red-600' },
             { label: 'Delivered', value: statusCounts.delivered, color: 'text-green-600' },
           ].map(stat => (
-            <div key={stat.label} className="bg-white rounded-lg border border-gray-200 p-4">
+            <div key={stat.label} className={`bg-white rounded-lg border p-4 ${stat.label === 'Overdue' && statusCounts.overdue > 0 ? 'border-red-200 bg-red-50' : 'border-gray-200'}`}>
               <p className="text-sm text-gray-500">{stat.label}</p>
               <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
             </div>
@@ -150,30 +155,36 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {orders.map(order => (
-                  <tr key={order.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{order.po_number}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{order.supplier_name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{order.item_description}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{order.quantity}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {new Date(order.expected_delivery).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status]}`}>
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <button
-                        onClick={() => navigator.clipboard.writeText(`http://localhost:3000/supplier/${order.supplier_token}`)}
-                        className="text-blue-600 hover:text-blue-800 text-xs"
-                      >
-                        Copy Link
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {orders.map(order => {
+                  const isOverdue = new Date(order.expected_delivery) < now && order.status !== 'delivered'
+                  return (
+                    <tr key={order.id} className={`hover:bg-gray-50 ${isOverdue ? 'bg-red-50' : ''}`}>
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                        {order.po_number}
+                        {isOverdue && <span className="ml-2 text-xs text-red-600 font-medium">OVERDUE</span>}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{order.supplier_name}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{order.item_description}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{order.quantity}</td>
+                      <td className={`px-6 py-4 text-sm ${isOverdue ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
+                        {new Date(order.expected_delivery).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status]}`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <button
+                          onClick={() => navigator.clipboard.writeText(`http://localhost:3000/supplier/${order.supplier_token}`)}
+                          className="text-blue-600 hover:text-blue-800 text-xs"
+                        >
+                          Copy Link
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           )}

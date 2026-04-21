@@ -20,3 +20,5 @@ app.include_router(orders.router, prefix="/api/orders", tags=["orders"])
 @app.get("/")
 def root():
     return {"status": "Conduit API running"}
+
+
