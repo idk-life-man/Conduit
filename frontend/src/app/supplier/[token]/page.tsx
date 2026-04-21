@@ -67,62 +67,67 @@ export default function SupplierPage() {
 
   if (loading) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <p className="text-gray-500">Loading...</p>
+      <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
   if (!order) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <p className="text-red-500">Invalid or expired link.</p>
+      <div className="text-center">
+        <p className="text-red-500 font-medium">Invalid or expired link.</p>
+        <p className="text-gray-500 text-sm mt-1">Please contact your supplier for a new link.</p>
+      </div>
     </div>
   )
 
   if (updated) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg border border-gray-200 p-8 max-w-md w-full text-center">
-        <div className="text-green-500 text-5xl mb-4">✓</div>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 max-w-md w-full text-center">
+        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Update Received</h2>
-        <p className="text-gray-500">Thank you for updating the delivery status for {order.po_number}.</p>
+        <p className="text-gray-500 text-sm">Thank you for updating the delivery status for <span className="font-medium text-gray-700">{order.po_number}</span>.</p>
       </div>
     </div>
   )
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg border border-gray-200 p-8 max-w-md w-full">
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-gray-900">Delivery Update</h1>
-          <p className="text-sm text-gray-500 mt-1">Please update the status for your shipment</p>
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 max-w-md w-full">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">C</span>
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900 leading-none">Conduit</h1>
+            <p className="text-xs text-gray-500">Delivery Update Request</p>
+          </div>
         </div>
 
-        <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">PO Number</span>
-            <span className="font-medium text-gray-900">{order.po_number}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Item</span>
-            <span className="font-medium text-gray-900">{order.item_description}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Quantity</span>
-            <span className="font-medium text-gray-900">{order.quantity}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Expected Delivery</span>
-            <span className="font-medium text-gray-900">
-              {new Date(order.expected_delivery).toLocaleDateString()}
-            </span>
-          </div>
+        <div className="bg-gray-50 rounded-xl p-4 mb-6 space-y-3">
+          {[
+            { label: 'PO Number', value: order.po_number },
+            { label: 'Item', value: order.item_description },
+            { label: 'Quantity', value: order.quantity.toString() },
+            { label: 'Expected Delivery', value: new Date(order.expected_delivery).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) },
+          ].map(row => (
+            <div key={row.label} className="flex justify-between text-sm">
+              <span className="text-gray-500">{row.label}</span>
+              <span className="font-medium text-gray-900">{row.value}</span>
+            </div>
+          ))}
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5 uppercase tracking-wide">Delivery Status</label>
             <select
               value={status}
               onChange={e => setStatus(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="pending">Pending</option>
               <option value="confirmed">Confirmed</option>
@@ -134,35 +139,35 @@ export default function SupplierPage() {
 
           {(status === 'delivered' || status === 'shipped') && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {status === 'delivered' ? 'Delivery Date' : 'Ship Date'}
+              <label className="block text-xs font-medium text-gray-700 mb-1.5 uppercase tracking-wide">
+                {status === 'delivered' ? 'Actual Delivery Date' : 'Ship Date'}
               </label>
               <input
                 type="date"
                 value={actualDelivery}
                 onChange={e => setActualDelivery(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5 uppercase tracking-wide">Notes (optional)</label>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="Any updates or comments about this shipment..."
               rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
           </div>
 
           <button
             onClick={updateOrder}
             disabled={updating}
-            className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50"
           >
-            {updating ? 'Updating...' : 'Submit Update'}
+            {updating ? 'Submitting...' : 'Submit Update'}
           </button>
         </div>
       </div>
