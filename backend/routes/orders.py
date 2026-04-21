@@ -21,6 +21,7 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db)):
     db_order = PurchaseOrder(
         po_number=order.po_number,
         organization_id=org.id,
+        user_id=order.user_id,
         supplier_name=order.supplier_name,
         supplier_email=order.supplier_email,
         item_description=order.item_description,
@@ -44,6 +45,10 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db)):
     )
     
     return db_order
+
+@router.get("/", response_model=list[OrderResponse])
+def get_orders(user_id: str, db: Session = Depends(get_db)):
+    return db.query(PurchaseOrder).filter(PurchaseOrder.user_id == user_id).all()
 
 @router.get("/", response_model=list[OrderResponse])
 def get_orders(db: Session = Depends(get_db)):

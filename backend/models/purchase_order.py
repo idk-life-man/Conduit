@@ -40,3 +40,9 @@ class PurchaseOrder(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     organization = relationship("Organization", back_populates="purchase_orders")
+
+    user_id = Column(String, nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+po_number = Column(String, nullable=False, unique=True)
+organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"))
+user_id = Column(String, nullable=False)

@@ -12,6 +12,7 @@ class OrderCreate(BaseModel):
     item_description: str
     quantity: int
     expected_delivery: datetime
+    user_id: str
 
 class OrderUpdate(BaseModel):
     status: Optional[POStatus] = None

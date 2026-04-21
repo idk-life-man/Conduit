@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useUser } from '@clerk/nextjs'
 
 interface Order {
   id: string
@@ -26,6 +27,7 @@ const STATUS_COLORS = {
 }
 
 export default function Home() {
+  const { user } = useUser()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -40,12 +42,13 @@ export default function Home() {
   })
 
   useEffect(() => {
-    fetchOrders()
-  }, [])
+    if (user) fetchOrders()
+  }, [user])
 
   const fetchOrders = async () => {
+    if (!user) return
     try {
-      const res = await fetch('http://localhost:8000/api/orders/')
+      const res = await fetch(`http://localhost:8000/api/orders/?user_id=${user.id}`)
       const data = await res.json()
       setOrders(data)
     } catch (e) {
@@ -62,6 +65,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          user_id: user?.id,
           quantity: parseInt(form.quantity),
           expected_delivery: new Date(form.expected_delivery).toISOString(),
         }),
@@ -93,22 +97,23 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* Header */}
       <div className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Conduit</h1>
           <p className="text-sm text-gray-500">Inbound Delivery Tracker</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
-        >
-          + New Order
-        </button>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-500">{user?.emailAddresses[0]?.emailAddress}</span>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+          >
+            + New Order
+          </button>
+        </div>
       </div>
 
       <div className="px-8 py-6">
-        {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           {[
             { label: 'Total Orders', value: statusCounts.total, color: 'text-gray-900' },
@@ -123,7 +128,6 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Orders Table */}
         <div className="bg-white rounded-lg border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">Purchase Orders</h2>
@@ -176,7 +180,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* New Order Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
