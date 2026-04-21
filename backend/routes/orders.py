@@ -6,6 +6,10 @@ from schemas.order import OrderCreate, OrderUpdate, OrderResponse
 import uuid
 from datetime import datetime
 from email_utils import send_supplier_notification
+import csv
+import io
+from fastapi import UploadFile, File
+from datetime import datetime
 
 router = APIRouter()
 
@@ -118,3 +122,48 @@ def get_supplier_reliability(user_id: str, db: Session = Depends(get_db)):
         })
 
     return sorted(result, key=lambda x: x["reliability_score"], reverse=True)
+
+@router.post("/import/csv")
+async def import_csv(user_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    contents = await file.read()
+    decoded = contents.decode("utf-8")
+    reader = csv.DictReader(io.StringIO(decoded))
+    
+    created = 0
+    errors = []
+    
+    for row in reader:
+        try:
+            org = db.query(Organization).filter(
+                Organization.name == row.get("organization_name", "Imported")
+            ).first()
+            if not org:
+                org = Organization(name=row.get("organization_name", "Imported"))
+                db.add(org)
+                db.commit()
+                db.refresh(org)
+
+            db_order = PurchaseOrder(
+                po_number=row["po_number"],
+                organization_id=org.id,
+                user_id=user_id,
+                supplier_name=row["supplier_name"],
+                supplier_email=row["supplier_email"],
+                item_description=row["item_description"],
+                quantity=int(row["quantity"]),
+                expected_delivery=datetime.fromisoformat(row["expected_delivery"]),
+                status=POStatus.pending,
+                supplier_token=str(uuid.uuid4())
+            )
+            db.add(db_order)
+            db.commit()
+            created += 1
+        except Exception as e:
+            errors.append(f"Row {created + len(errors) + 1}: {str(e)}")
+            db.rollback()
+
+    return {
+        "created": created,
+        "errors": errors,
+        "message": f"Successfully imported {created} orders"
+    }

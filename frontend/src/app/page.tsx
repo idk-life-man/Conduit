@@ -40,6 +40,8 @@ export default function Home() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<{created: number, errors: string[], message: string} | null>(null)
   const [form, setForm] = useState({
     po_number: '',
     organization_name: 'My Company',
@@ -112,6 +114,40 @@ export default function Home() {
     }
   }
 
+  const importCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+    setImporting(true)
+    const formData = new FormData()
+    formData.append('file', file)
+    try {
+      const res = await fetch(`http://localhost:8000/api/orders/import/csv?user_id=${user.id}`, {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+      setImportResult(data)
+      fetchOrders()
+      fetchSuppliers()
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const downloadTemplate = () => {
+    const csv = `po_number,organization_name,supplier_name,supplier_email,item_description,quantity,expected_delivery
+PO-001,My Company,ABC Supplier,supplier@company.com,Product description,100,2026-06-01
+PO-002,My Company,XYZ Supplier,xyz@company.com,Another product,50,2026-06-15`
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'conduit_template.csv'
+    a.click()
+  }
+
   const now = new Date()
 
   const statusCounts = {
@@ -131,8 +167,18 @@ export default function Home() {
           <h1 className="text-2xl font-bold text-gray-900">Conduit</h1>
           <p className="text-sm text-gray-500">Inbound Delivery Tracker</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500">{user?.emailAddresses[0]?.emailAddress}</span>
+          <button
+            onClick={downloadTemplate}
+            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50"
+          >
+            Download Template
+          </button>
+          <label className={`border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer hover:bg-gray-50 ${importing ? 'opacity-50' : ''}`}>
+            {importing ? 'Importing...' : 'Import CSV'}
+            <input type="file" accept=".csv" onChange={importCSV} className="hidden" disabled={importing} />
+          </label>
           <button
             onClick={() => setShowForm(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
@@ -143,6 +189,22 @@ export default function Home() {
       </div>
 
       <div className="px-8 py-6">
+        {importResult && (
+          <div className={`mb-6 p-4 rounded-lg border ${importResult.errors.length > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
+            <p className={`font-medium ${importResult.errors.length > 0 ? 'text-yellow-800' : 'text-green-800'}`}>
+              {importResult.message}
+            </p>
+            {importResult.errors.length > 0 && (
+              <ul className="mt-2 text-sm text-yellow-700">
+                {importResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+              </ul>
+            )}
+            <button onClick={() => setImportResult(null)} className="mt-2 text-sm text-gray-500 hover:text-gray-700">
+              Dismiss
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-4 gap-4 mb-6">
           {[
             { label: 'Overdue', value: statusCounts.overdue, color: statusCounts.overdue > 0 ? 'text-red-600' : 'text-gray-400' },
