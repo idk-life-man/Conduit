@@ -5,12 +5,12 @@ from models.purchase_order import PurchaseOrder, POStatus, Organization
 from schemas.order import OrderCreate, OrderUpdate, OrderResponse
 import uuid
 from datetime import datetime
+from email_utils import send_supplier_notification
 
 router = APIRouter()
 
 @router.post("/", response_model=OrderResponse)
 def create_order(order: OrderCreate, db: Session = Depends(get_db)):
-    # Create org if needed (simplified for now)
     org = db.query(Organization).filter(Organization.name == order.organization_name).first()
     if not org:
         org = Organization(name=order.organization_name)
@@ -32,6 +32,17 @@ def create_order(order: OrderCreate, db: Session = Depends(get_db)):
     db.add(db_order)
     db.commit()
     db.refresh(db_order)
+    
+    send_supplier_notification(
+        supplier_email=db_order.supplier_email,
+        supplier_name=db_order.supplier_name,
+        po_number=db_order.po_number,
+        item_description=db_order.item_description,
+        quantity=db_order.quantity,
+        expected_delivery=db_order.expected_delivery.strftime("%B %d, %Y"),
+        supplier_token=db_order.supplier_token
+    )
+    
     return db_order
 
 @router.get("/", response_model=list[OrderResponse])
