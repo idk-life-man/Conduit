@@ -167,3 +167,15 @@ async def import_csv(user_id: str, file: UploadFile = File(...), db: Session = D
         "errors": errors,
         "message": f"Successfully imported {created} orders"
     }
+
+@router.delete("/{order_id}")
+def delete_order(order_id: str, user_id: str, db: Session = Depends(get_db)):
+    order = db.query(PurchaseOrder).filter(
+        PurchaseOrder.id == order_id,
+        PurchaseOrder.user_id == user_id
+    ).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    db.delete(order)
+    db.commit()
+    return {"message": "Order deleted"}

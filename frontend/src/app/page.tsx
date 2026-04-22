@@ -61,6 +61,8 @@ export default function Home() {
   const [showForm, setShowForm] = useState(false)
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<{created: number, errors: string[], message: string} | null>(null)
+  const [search, setSearch] = useState('')
+  const [filterStatus, setFilterStatus] = useState('all')
   const [form, setForm] = useState({
     po_number: '',
     organization_name: 'My Company',
@@ -83,7 +85,7 @@ export default function Home() {
   const fetchOrders = async () => {
     if (!user) return
     try {
-      const res = await fetch(`http://localhost:8000/api/orders/?user_id=${user.id}`)
+      const res = await fetch(`https://conduit-backend-production-de38.up.railway.app/api/orders/?user_id=${user.id}`)
       const data = await res.json()
       setOrders(data)
     } catch (e) {
@@ -96,7 +98,7 @@ export default function Home() {
   const fetchSuppliers = async () => {
     if (!user) return
     try {
-      const res = await fetch(`http://localhost:8000/api/orders/suppliers/reliability?user_id=${user.id}`)
+      const res = await fetch(`https://conduit-backend-production-de38.up.railway.app/api/orders/suppliers/reliability?user_id=${user.id}`)
       const data = await res.json()
       setSuppliers(data)
     } catch (e) {
@@ -106,7 +108,7 @@ export default function Home() {
 
   const createOrder = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/orders/', {
+      const res = await fetch('https://conduit-backend-production-de38.up.railway.app/api/orders/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -135,6 +137,20 @@ export default function Home() {
     }
   }
 
+  const deleteOrder = async (orderId: string) => {
+    if (!user) return
+    if (!confirm('Delete this order?')) return
+    try {
+      await fetch(`https://conduit-backend-production-de38.up.railway.app/api/orders/${orderId}?user_id=${user.id}`, {
+        method: 'DELETE'
+      })
+      fetchOrders()
+      fetchSuppliers()
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   const importCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !user) return
@@ -142,7 +158,7 @@ export default function Home() {
     const formData = new FormData()
     formData.append('file', file)
     try {
-      const res = await fetch(`http://localhost:8000/api/orders/import/csv?user_id=${user.id}`, {
+      const res = await fetch(`https://conduit-backend-production-de38.up.railway.app/api/orders/import/csv?user_id=${user.id}`, {
         method: 'POST',
         body: formData,
       })
@@ -178,10 +194,21 @@ PO-002,My Company,XYZ Supplier,xyz@company.com,Another product,50,2026-06-15`
     delivered: orders.filter(o => o.status === 'delivered').length,
   }
 
+  const filteredOrders = orders.filter(order => {
+    const matchesSearch =
+      order.po_number.toLowerCase().includes(search.toLowerCase()) ||
+      order.supplier_name.toLowerCase().includes(search.toLowerCase()) ||
+      order.item_description.toLowerCase().includes(search.toLowerCase())
+    const matchesStatus = filterStatus === 'all' ||
+      (filterStatus === 'overdue'
+        ? new Date(order.expected_delivery) < now && order.status !== 'delivered'
+        : order.status === filterStatus)
+    return matchesSearch && matchesStatus
+  })
+
   return (
     <main className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-200">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-8 py-4 sticky top-0 z-40 backdrop-blur-sm">
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-8 py-4 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -192,7 +219,6 @@ PO-002,My Company,XYZ Supplier,xyz@company.com,Another product,50,2026-06-15`
               <p className="text-xs text-gray-500 dark:text-gray-400">Inbound Delivery Tracker</p>
             </div>
           </div>
-
           <div className="flex items-center gap-3">
             <button
               onClick={downloadTemplate}
@@ -219,7 +245,7 @@ PO-002,My Company,XYZ Supplier,xyz@company.com,Another product,50,2026-06-15`
             >
               + New Order
             </button>
-            <UserButton afterSignOutUrl="/sign-in" />
+            <UserButton />
           </div>
         </div>
       </header>
@@ -241,7 +267,6 @@ PO-002,My Company,XYZ Supplier,xyz@company.com,Another product,50,2026-06-15`
           </div>
         )}
 
-        {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mb-8">
           {[
             { label: 'Overdue', value: statusCounts.overdue, color: statusCounts.overdue > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400', border: statusCounts.overdue > 0 ? 'border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20' : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900' },
@@ -256,26 +281,49 @@ PO-002,My Company,XYZ Supplier,xyz@company.com,Another product,50,2026-06-15`
           ))}
         </div>
 
-        {/* Orders Table */}
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm mb-6">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900 dark:text-white">Purchase Orders</h2>
-            <span className="text-xs text-gray-500 dark:text-gray-400">{orders.length} orders</span>
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between gap-4">
+            <h2 className="font-semibold text-gray-900 dark:text-white whitespace-nowrap">Purchase Orders</h2>
+            <div className="flex items-center gap-3 flex-1 max-w-lg">
+              <input
+                type="text"
+                placeholder="Search PO number, supplier, item..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="flex-1 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <select
+                value={filterStatus}
+                onChange={e => setFilterStatus(e.target.value)}
+                className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All</option>
+                <option value="overdue">Overdue</option>
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="shipped">Shipped</option>
+                <option value="delivered">Delivered</option>
+                <option value="delayed">Delayed</option>
+              </select>
+            </div>
+            <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{filteredOrders.length} orders</span>
           </div>
           {loading ? (
             <div className="px-6 py-12 text-center">
               <div className="inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
             </div>
-          ) : orders.length === 0 ? (
+          ) : filteredOrders.length === 0 ? (
             <div className="px-6 py-12 text-center">
-              <p className="text-gray-500 dark:text-gray-400 text-sm">No orders yet. Create your first order to get started.</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                {orders.length === 0 ? 'No orders yet. Create your first order to get started.' : 'No orders match your search.'}
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100 dark:border-gray-800">
-                    {['PO Number', 'Supplier', 'Item', 'Qty', 'Expected Delivery', 'Status', 'Supplier Link'].map(h => (
+                    {['PO Number', 'Supplier', 'Item', 'Qty', 'Expected Delivery', 'Status', 'Actions'].map(h => (
                       <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                         {h}
                       </th>
@@ -283,7 +331,7 @@ PO-002,My Company,XYZ Supplier,xyz@company.com,Another product,50,2026-06-15`
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {orders.map(order => {
+                  {filteredOrders.map(order => {
                     const isOverdue = new Date(order.expected_delivery) < now && order.status !== 'delivered'
                     return (
                       <tr key={order.id} className={`transition-colors ${isOverdue ? 'bg-red-50 dark:bg-red-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}>
@@ -309,12 +357,20 @@ PO-002,My Company,XYZ Supplier,xyz@company.com,Another product,50,2026-06-15`
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <button
-                            onClick={() => navigator.clipboard.writeText(`http://localhost:3000/supplier/${order.supplier_token}`)}
-                            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors"
-                          >
-                            Copy Link
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => navigator.clipboard.writeText(`http://localhost:3000/supplier/${order.supplier_token}`)}
+                              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium transition-colors"
+                            >
+                              Copy Link
+                            </button>
+                            <button
+                              onClick={() => deleteOrder(order.id)}
+                              className="text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     )
@@ -325,7 +381,6 @@ PO-002,My Company,XYZ Supplier,xyz@company.com,Another product,50,2026-06-15`
           )}
         </div>
 
-        {/* Supplier Reliability */}
         {suppliers.length > 0 && (
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
@@ -369,7 +424,6 @@ PO-002,My Company,XYZ Supplier,xyz@company.com,Another product,50,2026-06-15`
         )}
       </div>
 
-      {/* New Order Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 w-full max-w-md border border-gray-200 dark:border-gray-800">

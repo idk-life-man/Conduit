@@ -31,7 +31,7 @@ export default function SupplierPage() {
 
   const fetchOrder = async () => {
     try {
-      const res = await fetch(`http://localhost:8000/api/orders/supplier/${token}`)
+      const res = await fetch(`https://conduit-backend-production-de38.up.railway.app/api/orders/supplier/${token}`)
       if (res.ok) {
         const data = await res.json()
         setOrder(data)
@@ -52,7 +52,7 @@ export default function SupplierPage() {
       if (notes) body.notes = notes
       if (actualDelivery) body.actual_delivery = new Date(actualDelivery).toISOString()
 
-      const res = await fetch(`http://localhost:8000/api/orders/supplier/${token}`, {
+      const res = await fetch(`https://conduit-backend-production-de38.up.railway.app/api/orders/supplier/${token}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
